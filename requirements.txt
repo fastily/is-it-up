@@ -1,0 +1,6 @@
+fastapi==0.100.0
+gunicorn==21.2.0
+httpx[http2]==0.24.1
+pydantic-settings==2.0.2
+redis[hiredis]==4.6.0
+uvicorn[standard]==0.23.1
