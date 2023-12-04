@@ -1,5 +1,5 @@
 # is-it-up
-[![Python 3.9+](https://upload.wikimedia.org/wikipedia/commons/4/4f/Blue_Python_3.9%2B_Shield_Badge.svg)](https://www.python.org)
+[![Python 3.11+](https://upload.wikimedia.org/wikipedia/commons/6/62/Blue_Python_3.11%2B_Shield_Badge.svg)](https://www.python.org)
 [![License: GPL v3](https://upload.wikimedia.org/wikipedia/commons/8/86/GPL_v3_Blue_Badge.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
 A simple API for checking if a website/domain is online.  Useful for troubleshooting network issues (e.g. is it just me or is it down for everyone?).
@@ -19,17 +19,18 @@ Example request:
 
 Example response:
 ```json
-{"status":200,"last_checked":"2023-01-01T06:49:19+00:00"}
+{
+    "status": 200,
+    "last_checked": "2023-12-04T10:21:36+00:00",
+    "cached": false
+}
 ```
 
 ## Dependencies
-* [Python](https://www.python.org) 3.9+
-* [Redis](https://redis.io)
+* [Python](https://www.python.org) 3.11+
 
 ## Configuration
 is-it-up can be configured via environment variables:
-* `redis_host` - the port of the redis server to use.  defaults to `localhost`
-* `redis_port` - the port of the redis server to use.  Defaults to `6379`
 * `show_docs` - indicates if the `/docs` endpoint should be exposed via http redirect from `/`.  Disabling this causes a generic error to be shown when visiting `/`.  Defaults to `true`
 
 ## Development commands

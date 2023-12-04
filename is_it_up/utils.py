@@ -19,6 +19,4 @@ class NullCookieJar(CookieJar):
 
 class Settings(BaseSettings):
     """Represents the settings obtained via environment variables"""
-    redis_host: str = "localhost"
-    redis_port: int = 6379
     show_docs: bool = True

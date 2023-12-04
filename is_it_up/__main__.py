@@ -1,21 +1,20 @@
 """Main module, contains logic for web app"""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlparse
-from uuid import uuid4
 
 import uvicorn
 
+from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from httpx import AsyncClient, RequestError
-from redis.asyncio import Redis
 
 from .utils import NullCookieJar, Settings
 
-_REPO_URL= "https://github.com/fastily/is-it-up"
+_REPO_URL = "https://github.com/fastily/is-it-up"
 _DESC = f"""\
 [![License: GPL v3](https://upload.wikimedia.org/wikipedia/commons/8/86/GPL_v3_Blue_Badge.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 
@@ -31,37 +30,38 @@ This is useful for instances when you can't acecss a website and want to check i
 * [GitHub]({_REPO_URL})
 """
 _DOCS_URL = "/docs"
-_CACHE_TTL = 300
 _UNREACHABLE_STATUS = -1
-_REDIS_PREFIX = f"is-it-up-{uuid4()}"
 
 settings = Settings()
-cache: Redis = Redis(host=settings.redis_host, port=settings.redis_port)
 client = AsyncClient(http2=True, cookies=NullCookieJar())
 
-app = FastAPI(title="Is it Up?", description=_DESC, version="0.0.1", docs_url=_DOCS_URL if settings.show_docs else None, redoc_url=None)
+c: TTLCache = TTLCache(2 ^ 16, 60*5)
+
+app = FastAPI(title="Is it Up?", description=_DESC, version="0.0.1", docs_url=_DOCS_URL if settings.show_docs else None, redoc_url=None, debug=True)
 app.add_middleware(CORSMiddleware, allow_origins=["https://ftools.toolforge.org"], allow_headers=["*"])
 
 
-def _result_with_status(status: int, offset: int = 0) -> dict[str, Any]:
-    """Convenience method, generates the output json for return to the user
-
-    Args:
-        status (int): The status code of the queried website to return
-        offset (int, optional): The ttl (in seconds) for the key in redis, will be used to calc `last_checked` time. Defaults to 0.
+def _now_timestamp() -> str:
+    """Convenience method, gets the current date & time in the iso8061 format
 
     Returns:
-        dict[str, Any]: _description_
+        str: The current date & time in the iso8061 format
     """
-    n = datetime.now(timezone.utc).replace(microsecond=0)
-    return {"status": status, "last_checked": ((n - timedelta(seconds=_CACHE_TTL-offset)) if offset else n).isoformat()}
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """Closes the redis and httpx client connections"""
-    await cache.close()
-    await client.aclose()
+def _result_with_status(status: int, last_checked: str, cached: bool = False) -> dict[str, Any]:
+    """Convenience method, generates the output json for the user
+
+    Args:
+        status (int): The status code of the queried website
+        last_checked (str): The timestamp at which the website was last checked
+        cached (bool, optional): Indicates if this is a cached result or not. Defaults to False.
+
+    Returns:
+        dict[str, Any]: The output json to send to the user
+    """
+    return {"status": status, "last_checked": last_checked, "cached": cached}
 
 
 @app.get("/", include_in_schema=False)
@@ -71,7 +71,7 @@ async def main():
 
 
 @app.get("/check")
-async def check_website(website: str = Query(max_length=100, pattern=r"[A-Za-z0-9\-\.]+")) -> dict[str, Any]:
+async def check_website(website: str = Query(max_length=128, pattern=r"[A-Za-z0-9\-\.]+")) -> dict[str, Any]:
     """Main endpoint logic for checking if a website is online.  Uses redis to cache results.
 
     Args:
@@ -84,18 +84,16 @@ async def check_website(website: str = Query(max_length=100, pattern=r"[A-Za-z0-
     if not (o.netloc or o.path) or "." not in website:
         raise HTTPException(400, "input website is malformed")
 
-    u = f"{o.scheme or 'https'}://{o.netloc or o.path}"
-    redis_key = f"{_REDIS_PREFIX}-{u}"
-    if (status := await cache.get(redis_key)) and (ttl := await cache.ttl(redis_key)) > 0:
-        return _result_with_status(int(status.decode()), ttl)
+    if (u := f"{o.scheme or 'https'}://{o.netloc or o.path}") in c:
+        return _result_with_status(*c.get(u), True)
 
     try:
         async with client.stream("GET", u, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"}) as response:
-            await cache.set(redis_key, response.status_code, _CACHE_TTL)
-            return _result_with_status(response.status_code)
+            c[u] = (response.status_code, _now_timestamp())
+            return _result_with_status(*c[u])
     except RequestError:
-        await cache.set(redis_key, _UNREACHABLE_STATUS, _CACHE_TTL)
-        return _result_with_status(_UNREACHABLE_STATUS)
+        c[u] = (_UNREACHABLE_STATUS, _now_timestamp())
+        return _result_with_status(*c[u])
     except:
         raise HTTPException(500, "Server error, unable to reach target website")
 

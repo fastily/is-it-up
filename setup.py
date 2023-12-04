@@ -17,13 +17,13 @@ setuptools.setup(
     },
     include_package_data=True,
     packages=setuptools.find_packages(include=["is_it_up"]),
-    install_requires=['fastapi', 'gunicorn', 'httpx[http2]', "pydantic-settings", "redis[hiredis]", "uvicorn[standard]"],
+    install_requires=['cachetools', 'fastapi', 'gunicorn', 'httpx[http2]', "pydantic-settings", "uvicorn[standard]"],
     classifiers=[
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.11",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.9',
+    python_requires='>=3.11',
 )
