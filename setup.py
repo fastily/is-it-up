@@ -17,7 +17,7 @@ setuptools.setup(
     },
     include_package_data=True,
     packages=setuptools.find_packages(include=["is_it_up"]),
-    install_requires=['cachetools', 'fastapi', 'gunicorn', 'httpx[http2]', "pydantic-settings", "uvicorn[standard]"],
+    install_requires=['cachetools', 'fastapi', 'gunicorn', 'httpx[http2]', 'pydantic-settings', 'spawn-user-agent', 'uvicorn[standard]'],
     classifiers=[
         "Natural Language :: English",
         "Programming Language :: Python :: 3",

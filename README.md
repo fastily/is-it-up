@@ -6,7 +6,7 @@ A simple API for checking if a website/domain is online.  Useful for troubleshoo
 
 ## Usage
 ### GET `/check`
-Takes a single URL parameter, `website` and queries it to see if it is up.  Retuns the http `status` code, and the time at which this domain was last queried as an iso 8601 timestamp.
+Takes a single URL parameter, `website` and queries it to see if it is up.  Retuns the http `status` code, the time at which this domain was last queried as an iso 8601 timestamp, and a boolean indiciating if this result was cached (i.e. whether someone else already made this request in the past 5m).
 
 * Responses are cached for 5m
 * Only the domain will be queried.  If you pass a URL wtih a path, it will be truncated.
@@ -25,9 +25,6 @@ Example response:
     "cached": false
 }
 ```
-
-## Dependencies
-* [Python](https://www.python.org) 3.11+
 
 ## Configuration
 is-it-up can be configured via environment variables:

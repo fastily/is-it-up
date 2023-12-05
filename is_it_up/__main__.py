@@ -1,6 +1,7 @@
 """Main module, contains logic for web app"""
 
 from datetime import datetime, timezone
+from random import choice
 from typing import Any
 from urllib.parse import urlparse
 
@@ -11,8 +12,9 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from httpx import AsyncClient, RequestError
+from spawn_user_agent.user_agent import SpawnUserAgent
 
-from .utils import NullCookieJar, Settings
+from .utils import NullCookieJar, Settings, TokenBucketRateLimiter
 
 _REPO_URL = "https://github.com/fastily/is-it-up"
 _DESC = f"""\
@@ -31,11 +33,12 @@ This is useful for instances when you can't acecss a website and want to check i
 """
 _DOCS_URL = "/docs"
 _UNREACHABLE_STATUS = -1
+_USER_AGENTS = SpawnUserAgent.generate_all()
 
 settings = Settings()
 client = AsyncClient(http2=True, cookies=NullCookieJar())
-
-c: TTLCache = TTLCache(2 ^ 16, 60*5)
+cache = TTLCache(2 ^ 16, 60*5)
+limiter = TokenBucketRateLimiter()
 
 app = FastAPI(title="Is it Up?", description=_DESC, version="0.0.1", docs_url=_DOCS_URL if settings.show_docs else None, redoc_url=None, debug=True)
 app.add_middleware(CORSMiddleware, allow_origins=["https://ftools.toolforge.org"], allow_headers=["*"])
@@ -84,16 +87,19 @@ async def check_website(website: str = Query(max_length=128, pattern=r"[A-Za-z0-
     if not (o.netloc or o.path) or "." not in website:
         raise HTTPException(400, "input website is malformed")
 
-    if (u := f"{o.scheme or 'https'}://{o.netloc or o.path}") in c:
-        return _result_with_status(*c.get(u), True)
+    if (u := f"{o.scheme or 'https'}://{o.netloc or o.path}") in cache:
+        return _result_with_status(*cache.get(u), True)
+
+    if not limiter.is_allowed():
+        raise HTTPException(429)
 
     try:
-        async with client.stream("GET", u, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"}) as response:
-            c[u] = (response.status_code, _now_timestamp())
-            return _result_with_status(*c[u])
+        async with client.stream("GET", u, headers={"User-Agent": choice(_USER_AGENTS)}) as response:
+            cache[u] = (response.status_code, _now_timestamp())
+            return _result_with_status(*cache[u])
     except RequestError:
-        c[u] = (_UNREACHABLE_STATUS, _now_timestamp())
-        return _result_with_status(*c[u])
+        cache[u] = (_UNREACHABLE_STATUS, _now_timestamp())
+        return _result_with_status(*cache[u])
     except:
         raise HTTPException(500, "Server error, unable to reach target website")
 
