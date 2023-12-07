@@ -37,7 +37,7 @@ _USER_AGENTS = SpawnUserAgent.generate_all()
 
 settings = Settings()
 client = AsyncClient(http2=True, cookies=NullCookieJar())
-cache = TTLCache(2 ^ 16, 60*5)
+cache = TTLCache(2^16, 60*5)
 limiter = TokenBucketRateLimiter()
 
 app = FastAPI(title="Is it Up?", description=_DESC, version="0.0.1", docs_url=_DOCS_URL if settings.show_docs else None, redoc_url=None, debug=True)
@@ -75,7 +75,7 @@ async def main():
 
 @app.get("/check")
 async def check_website(website: str = Query(max_length=128, pattern=r"[A-Za-z0-9\-\.]+")) -> dict[str, Any]:
-    """Main endpoint logic for checking if a website is online.  Uses redis to cache results.
+    """Main endpoint logic for checking if a website is online.
 
     Args:
         website (str, optional): The website to check. Defaults to Query(max_length=100, regex=r"[A-Za-z0-9\-\.]+").
