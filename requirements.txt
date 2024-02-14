@@ -1,5 +1,5 @@
 cachetools==5.3.2
-fastapi[all]==0.104.1
+fastapi[all]==0.109.2
 gunicorn==21.2.0
-httpx[http2]==0.25.2
+httpx[http2]==0.26.0
 spawn-user-agent==0.0.1
