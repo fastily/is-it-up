@@ -9,12 +9,11 @@ import uvicorn
 
 from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from httpx import AsyncClient, RequestError
 from spawn_user_agent.user_agent import SpawnUserAgent
 
-from .utils import NullCookieJar, Settings, TokenBucketRateLimiter
+from .utils import NullCookieJar, TokenBucketRateLimiter
 
 _REPO_URL = "https://github.com/fastily/is-it-up"
 _DESC = f"""\
@@ -35,13 +34,11 @@ _DOCS_URL = "/docs"
 _UNREACHABLE_STATUS = -1
 _USER_AGENTS = SpawnUserAgent.generate_all()
 
-settings = Settings()
 client = AsyncClient(http2=True, cookies=NullCookieJar())
 cache = TTLCache(2^16, 60*5)
 limiter = TokenBucketRateLimiter()
 
-app = FastAPI(title="Is it Up?", description=_DESC, version="0.0.1", docs_url=_DOCS_URL if settings.show_docs else None, redoc_url=None, debug=True)
-app.add_middleware(CORSMiddleware, allow_origins=["https://ftools.toolforge.org"], allow_headers=["*"])
+app = FastAPI(title="Is it Up?", description=_DESC, version="0.0.1", debug=True)
 
 
 def _now_timestamp() -> str:
@@ -69,16 +66,16 @@ def _result_with_status(status: int, last_checked: str, cached: bool = False) ->
 
 @app.get("/", include_in_schema=False)
 async def main():
-    """Index, either shows help or redirects to docs, depending on env settings"""
-    return RedirectResponse(_DOCS_URL) if settings.show_docs else {"visit_for_help": _REPO_URL}
+    """Index, redirects to docs"""
+    return RedirectResponse(_DOCS_URL)
 
 
 @app.get("/check")
-async def check_website(website: str = Query(max_length=128, pattern=r"[A-Za-z0-9\-\.]+")) -> dict[str, Any]:
+async def check_website(website: str = Query(max_length=128, pattern=r"[A-Za-z0-9.-]+")) -> dict[str, Any]:
     """Main endpoint logic for checking if a website is online.
 
     Args:
-        website (str, optional): The website to check. Defaults to Query(max_length=100, regex=r"[A-Za-z0-9\-\.]+").
+        website (str, optional): The website to check. Defaults to Query(max_length=100, regex=r"[A-Za-z0-9.-]+").
 
     Returns:
         dict[str, Any]: The result, containing info about whether the website was reachable.

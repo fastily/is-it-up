@@ -3,8 +3,6 @@
 from http.cookiejar import CookieJar
 from time import time
 
-from pydantic_settings import BaseSettings
-
 
 class NullCookieJar(CookieJar):
     """A CookieJar that rejects all cookies."""
@@ -16,11 +14,6 @@ class NullCookieJar(CookieJar):
     def set_cookie(self, _):
         """Normally for setting a cookie.  This implementation does nothing"""
         pass
-
-
-class Settings(BaseSettings):
-    """Represents the settings obtained via environment variables"""
-    show_docs: bool = True
 
 
 class TokenBucketRateLimiter:
