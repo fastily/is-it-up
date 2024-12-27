@@ -26,10 +26,6 @@ Example response:
 }
 ```
 
-## Configuration
-is-it-up can be configured via environment variables:
-* `show_docs` - indicates if the `/docs` endpoint should be exposed via http redirect from `/`.  Disabling this causes a generic error to be shown when visiting `/`.  Defaults to `true`
-
 ## Development commands
 ```bash
 # start

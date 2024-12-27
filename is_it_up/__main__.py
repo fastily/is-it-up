@@ -21,7 +21,7 @@ _DESC = f"""\
 
 A simple API for checking if a website/domain is online.
 
-This is useful for instances when you can't acecss a website and want to check if there is a problem with your connection.
+This is useful for instances when you can't access a website and want to check if there is a problem with your connection.
 
 * To avoid clobbering hosts, responses are cached for 5m
 * Only the domain will be queried.  If you pass a URL wtih a path, it will be truncated.
