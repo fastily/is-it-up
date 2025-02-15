@@ -35,7 +35,7 @@ _UNREACHABLE_STATUS = -1
 _USER_AGENTS = SpawnUserAgent.generate_all()
 
 client = AsyncClient(http2=True, cookies=NullCookieJar())
-cache = TTLCache(2^16, 60*5)
+cache = TTLCache(2 ^ 16, 60*5)
 limiter = TokenBucketRateLimiter()
 
 app = FastAPI(title="Is it Up?", description=_DESC, version="0.0.1", debug=True)
@@ -65,9 +65,23 @@ def _result_with_status(status: int, last_checked: str, cached: bool = False) ->
 
 
 @app.get("/", include_in_schema=False)
-async def main():
-    """Index, redirects to docs"""
+async def main() -> RedirectResponse:
+    """Index, redirects to docs
+
+    Returns:
+        RedirectResponse: A redirect to the `/docs` endpoint
+    """
     return RedirectResponse(_DOCS_URL)
+
+
+@app.get("/health", include_in_schema=False)
+async def health() -> dict:
+    """Health check endpoint which returns an empty body 200
+
+    Returns:
+        dict: An empty json object
+    """
+    return {}
 
 
 @app.get("/check")
