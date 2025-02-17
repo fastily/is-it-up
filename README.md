@@ -26,14 +26,11 @@ Example response:
 }
 ```
 
-## Development commands
+## Run
 ```bash
-# start
+# start in development mode, visit http://127.0.0.1:8000 to view the web interface
 python -m is_it_up
-```
 
-## Production commands
-```bash
-# run w/ gunicorn
-gunicorn -w 2 -k uvicorn.workers.UvicornWorker -b "0.0.0.0:8000" is_it_up.__main__:app
+# run w/ gunicorn, accessible at localhost:8000
+gunicorn -w 2 -k uvicorn.workers.UvicornWorker -b "0.0.0.0" is_it_up.__main__:app
 ```
