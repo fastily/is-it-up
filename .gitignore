@@ -15,9 +15,6 @@ __pycache__
 build
 dist
 *.egg-info
-
-# virtualenv
-venv_is_it_up
+.venv
 
 scratch.py
-redis.txt

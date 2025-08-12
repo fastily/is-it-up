@@ -28,9 +28,12 @@ Example response:
 
 ## Run
 ```bash
+# install dependencies
+uv sync --no-install-project
+
 # start in development mode, visit http://127.0.0.1:8000 to view the web interface
-python -m is_it_up
+uv run python -m is_it_up
 
 # run w/ gunicorn, accessible at localhost:8000
-gunicorn -w 2 -k uvicorn.workers.UvicornWorker -b "0.0.0.0" is_it_up.__main__:app
+uv run gunicorn -w 2 -k uvicorn.workers.UvicornWorker -b "0.0.0.0" is_it_up.__main__:app
 ```
