@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [project]
 name = "is-it-up"
 version = "0.0.1"
-dependencies = ["cachetools", "fastapi[all]", "gunicorn", "httpx[http2]", "spawn-user-agent"]
+dependencies = ["cachetools", "fastapi[standard]", "gunicorn", "requests", "spawn-user-agent"]
 requires-python = ">=3.11"
 authors = [{name = "Fastily", email = "fastily@users.noreply.github.com"}]
 description = "Queries a site to check if it is accessible"

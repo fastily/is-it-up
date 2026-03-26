@@ -5,15 +5,15 @@ from random import choice
 from typing import Any
 from urllib.parse import urlparse
 
+import requests
 import uvicorn
 
 from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
-from httpx import AsyncClient, RequestError
 from spawn_user_agent.user_agent import SpawnUserAgent
 
-from .utils import NullCookieJar, TokenBucketRateLimiter
+from .utils import TokenBucketRateLimiter
 
 _REPO_URL = "https://github.com/fastily/is-it-up"
 _DESC = f"""\
@@ -34,7 +34,6 @@ _DOCS_URL = "/docs"
 _UNREACHABLE_STATUS = -1
 _USER_AGENTS = SpawnUserAgent.generate_all()
 
-client = AsyncClient(http2=True, cookies=NullCookieJar())
 cache = TTLCache(2 ^ 16, 60*5)
 limiter = TokenBucketRateLimiter()
 
@@ -105,10 +104,10 @@ async def check_website(website: str = Query(max_length=128, pattern=r"[A-Za-z0-
         raise HTTPException(429)
 
     try:
-        async with client.stream("GET", u, headers={"User-Agent": choice(_USER_AGENTS)}) as response:
-            cache[u] = (response.status_code, _now_timestamp())
+        with requests.get(u, headers={"User-Agent": choice(_USER_AGENTS)}, timeout=3, stream=True) as r:
+            cache[u] = (r.status_code, _now_timestamp())
             return _result_with_status(*cache[u])
-    except RequestError:
+    except Exception:
         cache[u] = (_UNREACHABLE_STATUS, _now_timestamp())
         return _result_with_status(*cache[u])
     except:
