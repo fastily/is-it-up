@@ -1,19 +1,74 @@
 """Main module, contains logic for web app"""
 
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from random import choice
-from typing import Any
+from time import time
+from typing import Any, AsyncGenerator
 from urllib.parse import urlparse
 
-import requests
 import uvicorn
 
 from cachetools import TTLCache
+from curl_cffi import AsyncSession
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
-from spawn_user_agent.user_agent import SpawnUserAgent
 
-from .utils import TokenBucketRateLimiter
+
+##################################################################################################
+########################################## U T I L S #############################################
+##################################################################################################
+
+class TokenBucketRateLimiter:
+    """Basic implementation of a token bucket algorithim rate limiter"""
+
+    def __init__(self, capacity: int = 128, fill_rate: int = 2):
+        """Initializer, creates a new TokenBucketRateLimiter
+
+        Args:
+            capacity (int, optional): The maximum capacity of the bucket. Defaults to 128.
+            fill_rate (int, optional): The rate at which the bucket refills with tokens, in seconds. Defaults to 2.
+        """
+        self._capacity = capacity  # Maximum tokens the bucket can hold
+        self._fill_rate = fill_rate  # Tokens added per second
+        self._tokens = capacity  # Current number of tokens in the bucket
+        self._last_time = int(time())  # Last time tokens were added
+
+    def is_allowed(self, tokens_requested: int = 1) -> bool:
+        """Determines if whatever action the TokenBucketRateLimiter is being used to track can be performed
+
+        Args:
+            tokens_requested (int, optional): The number of tokens required to perform the action being tracked. Defaults to 1.
+
+        Returns:
+            bool: `True` if there are sufficient tokens available to perform the action being tracked.
+        """
+        self._tokens = min(self._capacity, self._tokens + ((current_time := int(time())) - self._last_time) * self._fill_rate)
+        self._last_time = current_time
+
+        if self._tokens >= tokens_requested:
+            self._tokens -= tokens_requested
+            return True
+        return False
+
+
+@asynccontextmanager
+async def _lifespan(_: FastAPI) -> AsyncGenerator[None, None, None]:
+    """Closes curl_cffi session on exit
+
+    Args:
+        _ (FastAPI): not used but required by FastAPI `lifespan` arg
+
+    Returns:
+        AsyncGenerator[None, None, None]: generator for use with lifespan
+    """
+    yield
+    await session.close()
+
+
+##################################################################################################
+############################## A P P L I C A T I O N  L O G I C ##################################
+##################################################################################################
+
 
 _REPO_URL = "https://github.com/fastily/is-it-up"
 _DESC = f"""\
@@ -32,12 +87,11 @@ This is useful for instances when you can't access a website and want to check i
 """
 _DOCS_URL = "/docs"
 _UNREACHABLE_STATUS = -1
-_USER_AGENTS = SpawnUserAgent.generate_all()
 
 cache = TTLCache(2 ^ 16, 60*5)
 limiter = TokenBucketRateLimiter()
-
-app = FastAPI(title="Is it Up?", description=_DESC, version="0.0.1", debug=True)
+session = AsyncSession()
+app = FastAPI(debug=True, title="Is it Up?", description=_DESC, version="0.0.1", lifespan=_lifespan)
 
 
 def _now_timestamp() -> str:
@@ -104,9 +158,8 @@ async def check_website(website: str = Query(max_length=128, pattern=r"[A-Za-z0-
         raise HTTPException(429)
 
     try:
-        with requests.get(u, headers={"User-Agent": choice(_USER_AGENTS)}, timeout=3, stream=True) as r:
-            cache[u] = (r.status_code, _now_timestamp())
-            return _result_with_status(*cache[u])
+        cache[u] = ((await session.get(u, timeout=3, stream=True)).status_code, _now_timestamp())
+        return _result_with_status(*cache[u])
     except Exception:
         cache[u] = (_UNREACHABLE_STATUS, _now_timestamp())
         return _result_with_status(*cache[u])

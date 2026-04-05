@@ -34,6 +34,6 @@ uv sync --no-install-project
 # start in development mode, visit http://127.0.0.1:8000 to view the web interface
 uv run python -m is_it_up
 
-# run w/ gunicorn, accessible at localhost:8000
-uv run gunicorn -w 2 -k uvicorn.workers.UvicornWorker -b "0.0.0.0" is_it_up.__main__:app
+# run w/ gunicorn, accessible at http://localhost:8000
+uv run gunicorn -w 2 -k uvicorn.workers.UvicornWorker -b "0.0.0.0" --access-logfile "-" is_it_up.__main__:app
 ```
