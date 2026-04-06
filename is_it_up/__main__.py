@@ -168,4 +168,4 @@ async def check_website(website: str = Query(max_length=128, pattern=r"[A-Za-z0-
 
 
 if __name__ == "__main__":
-    uvicorn.run("is_it_up.__main__:app", reload=True)
+    uvicorn.run(f"{__spec__.name}:app", reload=True)
