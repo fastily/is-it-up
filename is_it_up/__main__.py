@@ -158,7 +158,7 @@ async def check_website(website: str = Query(max_length=128, pattern=r"[A-Za-z0-
         raise HTTPException(429)
 
     try:
-        cache[u] = ((await session.get(u, timeout=3, stream=True)).status_code, _now_timestamp())
+        cache[u] = ((await session.get(u, timeout=3, stream=True, impersonate="chrome")).status_code, _now_timestamp())
         return _result_with_status(*cache[u])
     except Exception:
         cache[u] = (_UNREACHABLE_STATUS, _now_timestamp())
