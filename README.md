@@ -35,5 +35,5 @@ uv sync --no-install-project
 uv run python -m is_it_up
 
 # run w/ gunicorn, accessible at http://localhost:8000
-uv run gunicorn -w 2 -k uvicorn.workers.UvicornWorker -b "0.0.0.0" --access-logfile "-" is_it_up.__main__:app
+uv run gunicorn -w 2 -k uvicorn.workers.UvicornWorker -b "0.0.0.0" --access-logfile "-" --no-control-socket is_it_up.__main__:app
 ```
